@@ -21,7 +21,7 @@ app.post('/api/ai/ask', async (req, res) => {
   try {
     const dashboard = getDashboard();
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.7-flash' });
     const prompt = `You are an AI healthcare supply-chain operations assistant. Use only the supplied dashboard data. Give concise, actionable recommendations. Flag uncertainty.\nDashboard: ${JSON.stringify(dashboard)}\nQuestion: ${question}`;
     const result = await model.generateContent(prompt);
     res.json({ answer: result.response.text() });
