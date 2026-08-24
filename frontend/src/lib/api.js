@@ -1,28 +1,38 @@
-const API = 'http://localhost:5000/api';
+const API =
+  import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+async function request(endpoint, options = {}) {
+  const response = await fetch(`${API}${endpoint}`, options);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      `API Error ${response.status}: ${errorText || response.statusText}`
+    );
+  }
+
+  return response.json();
+}
 
 export async function getDashboard() {
-  const response = await fetch(`${API}/dashboard`);
-  return response.json();
+  return request('/dashboard');
 }
 
 export async function getRedistribution() {
-  const response = await fetch(`${API}/redistribution`);
-  return response.json();
+  return request('/redistribution');
 }
 
 export async function getFederated() {
-  const response = await fetch(`${API}/federated`);
-  return response.json();
+  return request('/federated');
 }
 
 export async function askAI(question) {
-  const response = await fetch(`${API}/ai/ask`, {
+  return request('/ai/ask', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ question }),
   });
-
-  return response.json();
 }
