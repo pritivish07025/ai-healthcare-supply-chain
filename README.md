@@ -1,46 +1,156 @@
-# AI-Powered Healthcare Supply Chain
+# 🏥 HealthStock AI
 
-A national-scale prototype for healthcare resource visibility, demand forecasting, stock-out early warnings, personnel attendance, bed availability, and cross-district redistribution recommendations.
+## Federated AI-Powered Healthcare Resource & Supply Chain Management Platform
 
-## Google AI integration
-- Gemini API powers the AI operations assistant and redistribution explanation endpoint.
-- Predictive modelling is implemented with a transparent demand forecast + stock-out risk model.
-- Federated learning is simulated by aggregating district-level model statistics without centralizing raw district data.
+HealthStock AI is an AI-powered healthcare resource management platform designed to provide better visibility into medicines, beds, personnel, and healthcare resource utilization across Primary Health Centres (PHCs).
 
-## Features
-- Medicine inventory dashboard
-- Bed availability by PHC/district
-- Personnel attendance monitoring
-- 7-day medicine demand forecasting
-- Stock-out risk scoring and alerts
-- Cross-district transfer recommendations
-- Gemini-powered natural-language operations assistant
-- Federated district model aggregation demo
+The platform uses AI-assisted analytics to identify potential shortages, forecast demand, and recommend cross-district resource redistribution.
 
-## Run
+---
 
-### 1. Backend
-```bash
-cd backend
-npm install
-cp .env.example .env
-# Put your Gemini API key in GEMINI_API_KEY
-npm run dev
-```
+## 🚨 Problem Statement
 
-Backend: http://localhost:5000
+Healthcare systems in developing nations manage large networks of Primary Health Centres (PHCs), hospitals, and district-level healthcare facilities.
 
-### 2. Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
+A lack of real-time visibility into:
 
-Frontend: http://localhost:5173
+- Medicine availability
+- Bed capacity
+- Medical personnel attendance
+- Resource utilization
+- Regional demand
 
-## Environment
-`GEMINI_API_KEY` is required for the AI assistant. Without it, the rest of the dashboard and deterministic analytics still work.
+can lead to medicine stock-outs, inefficient resource distribution, delayed emergency response, and poor utilization of available healthcare resources.
 
-## Production architecture
-See `docs/architecture.md` for the recommended Google Cloud deployment using Firebase, Cloud Run, BigQuery, Vertex AI, and Gemini.
+Traditional healthcare supply-chain systems are often reactive, meaning action is taken after a shortage occurs.
+
+**HealthStock AI aims to make healthcare resource management more proactive, predictive, and data-driven.**
+
+---
+
+## 🎯 Challenge
+
+The objective of this project is to build a **federated AI platform for national-scale healthcare resource and supply-chain management**.
+
+The platform focuses on:
+
+- Real-time medicine stock visibility
+- Bed availability tracking
+- Medical personnel attendance monitoring
+- Medicine demand forecasting
+- Early warnings for potential stock-outs
+- Automated cross-district resource redistribution recommendations
+- Privacy-aware predictive modelling
+- Future support for shared predictive modelling across BRICS nations
+
+---
+
+## 🌐 Live Demo
+
+### 🚀 HealthStock AI
+
+**Live Website:**  
+https://healthstockai.netlify.app/
+
+The live dashboard provides access to:
+
+- National Healthcare Overview
+- Medicine Inventory
+- Bed Availability
+- Personnel Attendance
+- Redistribution Recommendations
+- Federated AI Dashboard
+- AI Healthcare Copilot
+
+---
+
+## 🛠️ Technologies Used
+
+### Frontend
+
+- React.js
+- Vite
+- JavaScript
+- Recharts
+- Lucide React
+- CSS3
+
+### Backend
+
+- Node.js
+- Express.js
+- REST API
+- JavaScript
+
+### Artificial Intelligence
+
+- Google Gemini API
+- AI-powered Healthcare Copilot
+- Demand Forecasting
+- Stock-Out Risk Analysis
+- AI-assisted Redistribution Recommendations
+- Federated AI Architecture
+
+### Deployment
+
+- Netlify — Frontend Deployment
+- Render — Backend Deployment
+
+---
+
+## ✨ Key Features
+
+### 📦 Medicine Inventory
+
+Provides visibility into medicine stock across different districts and healthcare facilities.
+
+The system displays:
+
+- Current stock
+- Daily demand
+- Days of stock coverage
+- Medicine category
+- Forecast
+- Risk level
+
+---
+
+### ⚠️ Stock-Out Risk Detection
+
+The system identifies medicines that may become unavailable based on current inventory and demand trends.
+
+Risk levels include:
+
+- Low
+- Medium
+- High
+- Critical
+
+This helps healthcare administrators take action before a shortage becomes critical.
+
+---
+
+### 📈 Demand Forecasting
+
+The platform analyzes medicine demand patterns to provide future demand projections.
+
+This can help answer questions such as:
+
+> Which medicines may require additional stock in the coming days?
+
+---
+
+### 🚚 Cross-District Redistribution
+
+HealthStock AI recommends transferring medicines from districts with sufficient stock to districts experiencing shortages.
+
+Example:
+
+```text
+District A
+Surplus Medicine
+      ↓
+AI Recommendation
+      ↓
+District B
+Critical Shortage
