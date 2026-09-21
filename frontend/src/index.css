@@ -1,0 +1,732 @@
+import { useEffect, useState } from 'react';
+import {
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  BedDouble,
+  Bot,
+  Boxes,
+  Building2,
+  ChevronRight,
+  CircleCheck,
+  Clock3,
+  LayoutDashboard,
+  Map,
+  Menu,
+  Pill,
+  RefreshCw,
+  ShieldCheck,
+  Stethoscope,
+  Syringe,
+  Users,
+  X,
+} from 'lucide-react';
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import { askAI, getDashboard, getFederated, getRedistribution } from './lib/api';
+
+const navItems = [
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'inventory', label: 'Medicine Inventory', icon: Boxes },
+  { id: 'beds', label: 'Bed Availability', icon: BedDouble },
+  { id: 'people', label: 'Personnel', icon: Users },
+  { id: 'redistribution', label: 'Redistribution', icon: Map },
+  { id: 'federated', label: 'Federated AI', icon: ShieldCheck },
+];
+
+const riskClasses = {
+  Low: 'bg-emerald-100 text-emerald-700',
+  Medium: 'bg-amber-100 text-amber-700',
+  High: 'bg-orange-100 text-orange-700',
+  Critical: 'bg-red-100 text-red-700',
+};
+
+const quickPrompts = [
+  'Which medicines need action today?',
+  'Show district risks and shortages',
+  'What should we do for shortages?',
+];
+
+function App() {
+  const [data, setData] = useState(null);
+  const [redistribution, setRedistribution] = useState([]);
+  const [federated, setFederated] = useState(null);
+  const [page, setPage] = useState('overview');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [question, setQuestion] = useState('Which medicines need action today?');
+  const [answer, setAnswer] = useState('');
+
+  useEffect(() => {
+    Promise.all([getDashboard(), getRedistribution(), getFederated()])
+      .then(([dashboard, redistributed, federatedData]) => {
+        setData(dashboard);
+        setRedistribution(redistributed);
+        setFederated(federatedData);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }, []);
+
+  if (!data) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-100 text-slate-700">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-sm">
+          <Activity className="h-6 w-6 animate-pulse text-emerald-600" />
+          <span className="text-lg font-semibold">Loading healthcare command center…</span>
+        </div>
+      </div>
+    );
+  }
+
+  const pageTitle = navItems.find((item) => item.id === page)?.label ?? 'Overview';
+
+  const kpis = [
+    {
+      label: 'Medicines tracked',
+      value: data.kpis.medicinesTracked,
+      sub: 'active SKUs',
+      icon: Boxes,
+      accent: 'emerald',
+    },
+    {
+      label: 'Stockout alerts',
+      value: data.kpis.stockoutAlerts,
+      sub: 'district actions',
+      icon: AlertTriangle,
+      accent: 'amber',
+    },
+    {
+      label: 'Beds available',
+      value: data.kpis.bedsAvailable,
+      sub: `${data.kpis.bedOccupancy}% occupancy`,
+      icon: BedDouble,
+      accent: 'sky',
+    },
+    {
+      label: 'Attendance',
+      value: `${data.kpis.attendance}%`,
+      sub: 'clinical staff',
+      icon: Users,
+      accent: 'violet',
+    },
+  ];
+
+  const heroChart = data.medicines.map((medicine) => ({
+    name: medicine.name.split(' ')[0],
+    stock: medicine.stock,
+    demand: medicine.dailyDemand,
+  }));
+
+  const facilityChart = data.facilities.map((facility) => ({
+    name: facility.name.split(' ')[0],
+    occupancy: Math.round((facility.occupied / facility.beds) * 100),
+  }));
+
+  return (
+    <div className="min-h-screen bg-slate-100">
+      <div className="flex min-h-screen">
+        <aside
+          className={`fixed inset-y-0 left-0 z-40 w-72 transform border-r border-slate-800 bg-slate-900 p-5 text-slate-200 transition-transform duration-200 lg:static lg:translate-x-0 ${
+            menuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="mb-8 flex items-center gap-3 px-2">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-lime-300 text-slate-900 shadow-lg shadow-lime-300/20">
+              <Activity className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-base font-bold text-white">HealthFlow AI</div>
+              <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">Supply Chain Command</div>
+            </div>
+          </div>
+
+          <nav className="space-y-1.5">
+            {navItems.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  setPage(id);
+                  setMenuOpen(false);
+                }}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition ${
+                  page === id
+                    ? 'bg-slate-800 text-lime-300 shadow-inner shadow-slate-700'
+                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-800/60 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-lime-300">
+              <ShieldCheck className="h-4 w-4" />
+              Privacy aware
+            </div>
+            <p className="mt-3 text-xs leading-5 text-slate-400">
+              Raw district records stay local while only aggregate intelligence is shared.
+            </p>
+          </div>
+        </aside>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
+            <div className="flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((open) => !open)}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-700 lg:hidden"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">National dashboard</p>
+                  <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">{pageTitle}</h1>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setChatOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-700/20 transition hover:bg-emerald-800"
+              >
+                <Bot className="h-4 w-4" />
+                AI Assistant
+              </button>
+            </div>
+          </header>
+
+          <main className="p-4 sm:p-6 lg:p-8">
+            {page === 'overview' && <OverviewSection data={data} setPage={setPage} />}
+            {page === 'inventory' && <InventorySection data={data} />}
+            {page === 'beds' && <BedsSection data={data} />}
+            {page === 'people' && <PeopleSection data={data} />}
+            {page === 'redistribution' && <RedistributionSection items={redistribution} />}
+            {page === 'federated' && <FederatedSection fed={federated} />}
+          </main>
+        </div>
+      </div>
+
+      {chatOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-900/20">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Gemini-powered</p>
+                <h2 className="mt-1 text-2xl font-bold text-slate-900">Healthcare chatbot</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setChatOpen(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-slate-200"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mb-4 flex flex-wrap gap-2">
+              {quickPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => setQuestion(prompt)}
+                  className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              value={question}
+              onChange={(event) => setQuestion(event.target.value)}
+              className="h-28 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+              placeholder="Ask about stockouts, district risk, or redistribution opportunities"
+            />
+
+            <div className="mt-3 flex justify-end">
+              <button
+                type="button"
+                onClick={async () => {
+                  setAnswer('Thinking…');
+                  try {
+                    const response = await askAI(question);
+                    setAnswer(response.answer || response.error || 'No answer returned');
+                  } catch (error) {
+                    setAnswer(error.message || 'Request failed');
+                  }
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                <Bot className="h-4 w-4" />
+                Ask AI
+              </button>
+            </div>
+
+            {answer && (
+              <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm leading-7 text-slate-700 whitespace-pre-wrap">
+                {answer}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OverviewSection({ data, setPage }) {
+  const topRiskMedicines = [...data.medicines].sort((a, b) => b.analytics.risk - a.analytics.risk).slice(0, 4);
+
+  return (
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-[28px] bg-slate-900 text-white shadow-xl shadow-slate-900/10">
+        <div className="grid gap-8 px-5 py-6 sm:px-8 lg:grid-cols-[1.5fr_0.9fr] lg:px-10 lg:py-10">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full bg-slate-800 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-lime-300">
+              <Activity className="h-3.5 w-3.5" />
+              Live monitoring
+            </span>
+            <h2 className="mt-4 max-w-xl text-3xl font-bold leading-tight sm:text-5xl">
+              Healthcare resources, <span className="text-lime-300">clinical readiness</span> and supply resilience.
+            </h2>
+            <p className="mt-4 max-w-xl text-sm leading-7 text-slate-300 sm:text-base">
+              Track stockout risk, bed pressure, and workforce coverage across the network with AI-guided decision support.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-700 bg-slate-800/70 p-5">
+            <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-slate-400">
+              <span>Network health</span>
+              <span>Now</span>
+            </div>
+            <div className="mt-5 text-5xl font-bold text-lime-300">{data.kpis.bedsAvailable}</div>
+            <div className="mt-3 text-xs text-slate-400">available beds across monitored facilities</div>
+            <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-slate-700">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-lime-400 to-emerald-500"
+                style={{ width: `${Math.max(18, 100 - data.kpis.bedOccupancy)}%` }}
+              />
+            </div>
+            <div className="mt-4 flex items-center justify-between text-xs text-slate-300">
+              <span>Operational capacity</span>
+              <span>{Math.max(18, 100 - data.kpis.bedOccupancy)}%</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: 'Medicines tracked', value: data.kpis.medicinesTracked, icon: Boxes, sub: 'active SKUs' },
+          { label: 'Stockout alerts', value: data.kpis.stockoutAlerts, icon: AlertTriangle, sub: 'needs attention' },
+          { label: 'Beds available', value: data.kpis.bedsAvailable, icon: BedDouble, sub: 'open capacity' },
+          { label: 'Attendance', value: `${data.kpis.attendance}%`, icon: Users, sub: 'staff present' },
+        ].map(({ label, value, icon: Icon, sub }) => (
+          <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                <Icon className="h-5 w-5" />
+              </div>
+              <span className="text-[10px] uppercase tracking-[0.12em] text-slate-400">Live</span>
+            </div>
+            <div className="mt-5 text-sm text-slate-500">{label}</div>
+            <div className="mt-2 text-3xl font-bold text-slate-900">{value}</div>
+            <div className="mt-1 text-xs text-slate-400">{sub}</div>
+          </div>
+        ))}
+      </section>
+
+      <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Supply trend</p>
+              <h3 className="mt-1 text-xl font-bold text-slate-900">Medicine demand and stock profile</h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPage('inventory')}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700"
+            >
+              View details
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={heroChart}>
+                <defs>
+                  <linearGradient id="stockFill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="5%" stopColor="#34d399" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#34d399" stopOpacity={0.1} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="name" stroke="#64748b" />
+                <YAxis stroke="#64748b" />
+                <Tooltip />
+                <Area type="monotone" dataKey="stock" stroke="#10b981" fill="url(#stockFill)" strokeWidth={3} />
+                <Area type="monotone" dataKey="demand" stroke="#22c55e" fill="none" strokeWidth={2} strokeDasharray="5 5" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Priority alerts</p>
+              <h3 className="mt-1 text-xl font-bold text-slate-900">Highest risk medicines</h3>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-4">
+            {topRiskMedicines.map((medicine) => (
+              <div key={medicine.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm">
+                      <Pill className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-800">{medicine.name}</div>
+                      <div className="text-xs text-slate-500">{medicine.districtId}</div>
+                    </div>
+                  </div>
+                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${riskClasses[medicine.analytics.level]}`}>
+                    {medicine.analytics.level}
+                  </span>
+                </div>
+                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-red-400 to-orange-400"
+                    style={{ width: `${medicine.analytics.risk}%` }}
+                  />
+                </div>
+                <div className="mt-2 flex justify-between text-[11px] text-slate-500">
+                  <span>Risk {medicine.analytics.risk}%</span>
+                  <span>{medicine.analytics.daysOfCover} days cover</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {data.alerts.length > 0 && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                <AlertTriangle className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-amber-800">Critical alert</div>
+                <div className="text-sm text-amber-700">
+                  {data.alerts[0].name} has elevated stockout risk and needs immediate replenishment action.
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPage('inventory')}
+              className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700"
+            >
+              Review supply plan
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function InventorySection({ data }) {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Real-time inventory</p>
+          <h2 className="mt-1 text-3xl font-bold text-slate-900">Medicine stock intelligence</h2>
+        </div>
+        <button type="button" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+          <RefreshCw className="h-4 w-4" />
+          Refresh view
+        </button>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+              <tr>
+                <th className="px-5 py-4">Medicine</th>
+                <th className="px-5 py-4">Category</th>
+                <th className="px-5 py-4">District</th>
+                <th className="px-5 py-4">Stock</th>
+                <th className="px-5 py-4">Daily demand</th>
+                <th className="px-5 py-4">Risk</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.medicines.map((medicine) => (
+                <tr key={medicine.id} className="border-t border-slate-200">
+                  <td className="px-5 py-4">
+                    <div className="font-semibold text-slate-800">{medicine.name}</div>
+                    <div className="text-xs text-slate-500">{medicine.unit}</div>
+                  </td>
+                  <td className="px-5 py-4 text-slate-600">{medicine.category}</td>
+                  <td className="px-5 py-4 text-slate-600">{medicine.districtId}</td>
+                  <td className="px-5 py-4 font-semibold text-slate-800">{medicine.stock.toLocaleString()}</td>
+                  <td className="px-5 py-4 text-slate-600">{medicine.dailyDemand}</td>
+                  <td className="px-5 py-4">
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${riskClasses[medicine.analytics.level]}`}>
+                      {medicine.analytics.level} · {medicine.analytics.risk}%
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BedsSection({ data }) {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Bed Capacity</p>
+          <h2 className="mt-1 text-3xl font-bold text-slate-900">Facility utilization</h2>
+        </div>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
+        {data.facilities.map((facility) => {
+          const occupancy = Math.round((facility.occupied / facility.beds) * 100);
+
+          return (
+            <div key={facility.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                  <BedDouble className="h-5 w-5" />
+                </div>
+                <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-700">Stable</span>
+              </div>
+
+              <h3 className="mt-4 text-xl font-bold text-slate-900">{facility.name}</h3>
+              <p className="mt-1 text-sm text-slate-500">{facility.districtId}</p>
+
+              <div className="mt-5 flex items-end gap-2">
+                <span className="text-4xl font-bold text-slate-900">{facility.occupied}</span>
+                <span className="pb-1 text-sm text-slate-500">/{facility.beds} occupied</span>
+              </div>
+
+              <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-200">
+                <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-lime-400" style={{ width: `${occupancy}%` }} />
+              </div>
+
+              <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                <span>{occupancy}% occupancy</span>
+                <span>{facility.beds - facility.occupied} beds open</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 className="text-xl font-bold text-slate-900">Facility occupancy distribution</h3>
+        <div className="mt-5 h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={facilityChart}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="name" stroke="#64748b" />
+              <YAxis stroke="#64748b" />
+              <Tooltip />
+              <Bar dataKey="occupancy" fill="#10b981" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function PeopleSection({ data }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Clinical staffing</p>
+        <h2 className="mt-1 text-3xl font-bold text-slate-900">Personnel attendance</h2>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+              <tr>
+                <th className="px-5 py-4">Personnel</th>
+                <th className="px-5 py-4">Role</th>
+                <th className="px-5 py-4">Facility</th>
+                <th className="px-5 py-4">Status</th>
+                <th className="px-5 py-4">Check-in</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.personnel.map((person) => (
+                <tr key={person.id} className="border-t border-slate-200">
+                  <td className="px-5 py-4">
+                    <div className="font-semibold text-slate-800">{person.name}</div>
+                    <div className="text-xs text-slate-500">{person.id}</div>
+                  </td>
+                  <td className="px-5 py-4 text-slate-600">{person.role}</td>
+                  <td className="px-5 py-4 text-slate-600">{person.facilityId}</td>
+                  <td className="px-5 py-4">
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                        person.status === 'Present'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : person.status === 'Absent'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {person.status}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 text-slate-600">{person.checkIn ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RedistributionSection({ items }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">AI decision support</p>
+        <h2 className="mt-1 text-3xl font-bold text-slate-900">Cross-district redistribution</h2>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-3">
+        {items.map((item) => (
+          <div key={`${item.medicine}-${item.from}-${item.to}`} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                <Map className="h-5 w-5" />
+              </div>
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${item.priority === 'High' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                {item.priority}
+              </span>
+            </div>
+
+            <div className="mt-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
+              <span>{item.from}</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+              <span>{item.to}</span>
+            </div>
+
+            <h3 className="mt-3 text-xl font-bold text-slate-900">{item.medicine}</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{item.reason}</p>
+
+            <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4 text-sm text-slate-600">
+              <span>Quantity</span>
+              <span className="font-bold text-slate-900">{item.quantity.toLocaleString()} units</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FederatedSection({ fed }) {
+  if (!fed) return null;
+
+  return (
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-[28px] bg-slate-900 text-white shadow-xl shadow-slate-900/10">
+        <div className="grid gap-8 px-5 py-6 sm:px-8 lg:grid-cols-[1.3fr_0.7fr] lg:px-10 lg:py-10">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full bg-slate-800 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-lime-300">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Privacy-aware model sharing
+            </span>
+            <h2 className="mt-4 max-w-xl text-3xl font-bold leading-tight sm:text-5xl">
+              Learn nationally without exposing district-level patient data.
+            </h2>
+            <p className="mt-4 max-w-xl text-sm leading-7 text-slate-300 sm:text-base">
+              Aggregated forecasting models now span {fed.participatingDistricts} districts while preserving raw record privacy.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-700 bg-slate-800/70 p-5">
+            <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-slate-400">
+              <span>Model score</span>
+              <span>Rounds {fed.rounds}</span>
+            </div>
+            <div className="mt-6 text-5xl font-bold text-lime-300">{fed.aggregatedMae}</div>
+            <div className="mt-3 text-xs text-slate-400">weighted MAE across districts</div>
+            <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-slate-700">
+              <div className="h-full w-[76%] rounded-full bg-gradient-to-r from-lime-400 to-emerald-500" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+              <tr>
+                <th className="px-5 py-4">District</th>
+                <th className="px-5 py-4">Samples</th>
+                <th className="px-5 py-4">Local MAE</th>
+                <th className="px-5 py-4">Model version</th>
+              </tr>
+            </thead>
+            <tbody>
+              {fed.districtUpdates.map((district) => (
+                <tr key={district.district} className="border-t border-slate-200">
+                  <td className="px-5 py-4 font-semibold text-slate-800">{district.district}</td>
+                  <td className="px-5 py-4 text-slate-600">{district.samples.toLocaleString()}</td>
+                  <td className="px-5 py-4 text-slate-600">{district.localMae}</td>
+                  <td className="px-5 py-4 text-slate-600">{district.modelVersion}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
