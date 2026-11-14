@@ -2,7 +2,6 @@
 
 ### AI-Powered Healthcare Resource & Supply Chain Management Platform
 
-
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-HealthStock%20AI-00C7B7?style=for-the-badge\&logo=netlify\&logoColor=white)](https://healthstockai.netlify.app/)
 [![Frontend](https://img.shields.io/badge/Frontend-React.js-61DAFB?style=for-the-badge\&logo=react\&logoColor=black)](https://react.dev/)
 [![Backend](https://img.shields.io/badge/Backend-Node.js-339933?style=for-the-badge\&logo=node.js\&logoColor=white)](https://nodejs.org/)
